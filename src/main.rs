@@ -5,7 +5,7 @@ use std::str::Utf8Error;
 use serde_json::{Result, Value};
 
 fn main() {
-    let mut torrent_file = match File::open("kingsman-golden-circle.torrent") {
+    let mut torrent_file = match File::open("") {
         Ok(file) => file,
         Err(_err) => panic!("cannot open file"),
     };
