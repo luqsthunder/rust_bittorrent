@@ -43,14 +43,15 @@ fn decode_bencode(file: &mut File) -> (usize, MetaInfoNode) {
 
     // preparing to read single char
     let mut single_char:Vec<u8> = Vec::new();
+    let read_char:&char = &(single_char[0] as char);
     single_char.resize(1, 0);
     let res = file.read_exact(&mut single_char.as_slice());
     // check for end of file;
 
-    let mut read_size = 1;
+    let mut read_size:usize = 1;
 
 
-    // definindo o tipo do nó
+    // defining node type
     let tp_node: MetaInfoNodeType = match single_char as char {
         'i' => MetaInfoNodeType::Integer,
         '0'..'9' => MetaInfoNodeType::String,
@@ -58,23 +59,50 @@ fn decode_bencode(file: &mut File) -> (usize, MetaInfoNode) {
         'd' => MetaInfoNodeType::Dict,
     };
 
-    if (single_char as char) == 'd' {
-        let mut end_char = '\0';
-        while end_char as char != 'e' {
+    if read_char == 'd' {
+        let mut end_char:Vec<u8> = Vec::new();
+        end_char.resize(1, '\0' as u8);
+
+        while end_char[0] as char  != 'e' {
+            // read key in file
             let size_n_key = decode_bencode(file);
             read_size += size_n_key.0;
-            file.seek(SeekFrom(read_size));
+
+            // set position of file at end of read key
+            file.seek(SeekFrom::Start(read_size as u64));
+
+            // read value
+            let size_n_val = decode_bencode(file);
+            read_size += size_n_val.0;
+
+            // insert key, val into children hashmap and set position of file
+            // at end of read value
+            children.insert(size_n_key.1, size_n_val.1);
+            file.seek(SeekFrom::Start(read_size as u64));
+
+            //read if not 'e' back one char and decode the rest
+            let res_d = file.read_exact(&mut single_char.as_slice());
+            if single_char[0] as char != 'e' {
+                file.seek(SeekFrom::Start(read_size as u64));
+            }
+            else {
+                read_size += 1;
+            }
         }
     }
-    else if (single_char as char) == 'l' {
+    else if read_char == 'l' {
         // recurção
     }
-    else if (single_char as char) >= '0' || (single_char as char) <= '9' {
+    else if read_char >= '0' || read_char <= '9' {
         // for para ler ate o fim dos numeros, lê dois pontos, lê a quantidade
+
+    }
+    else if read_char == 'i' {
+
     }
 
 
-    (read_size, MetaInfoNode::new())
+    (read_size, MetaInfoNode::new_with(tp_node, data, children))
 }
 
 }
